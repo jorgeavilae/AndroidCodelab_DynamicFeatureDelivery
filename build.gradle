@@ -21,12 +21,12 @@ buildscript {
     ext.versions = [
             'compileSdk'        : 28,
             'minSdk'            : 16,
-            'targetSdk'         : 28,
+            'targetSdk'         : 29,
             'kotlin'            : '1.4.0'
     ]
 
     ext.names = [
-            'applicationId': 'com.google.android.samples.dynamicfeatures.ondemand'
+            'applicationId': 'com.jorgeav.androidcodelab.dynamicfeatures.ondemand'
     ]
 
     repositories {
