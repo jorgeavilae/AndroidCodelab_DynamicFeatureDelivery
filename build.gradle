@@ -22,8 +22,7 @@ buildscript {
             'compileSdk'        : 28,
             'minSdk'            : 16,
             'targetSdk'         : 28,
-            'kotlin'            : '1.4.0',
-            'playcore'          : '1.6.3'
+            'kotlin'            : '1.4.0'
     ]
 
     ext.names = [
