@@ -23,6 +23,31 @@
     <!-- This feature module doesn't contain code. -->
     <application android:hasCode="false" />
 
+<!--
+    https://developer.android.com/guide/app-bundle/dynamic-delivery#dynamic_feature_manifest
+
+    split="split_name"
+
+    When Android Studio builds your app bundle, it includes this attribute for you. So,
+    you should not include or modify this attribute yourself.
+
+    Defines the name of the module, which your app specifies when requesting an on demand
+    module using the Play Core Library.
+
+    How Gradle determines the value for this attribute:
+
+    By default, when you create a feature module using Android Studio, The IDE uses what
+    you specify as its Module name to identify the module as a Gradle subproject in your
+    Gradle settings file.
+
+    When you build your app bundle, Gradle uses the last element of the subproject path to
+    inject this manifest attribute in the module’s manifest. For example, if you create a
+    new feature module in the MyAppProject/features/ directory and specified "dynamic_feature1"
+    as its Module name, the IDE adds ':features:dynamic_feature1' as a subproject in your
+    settings.gradle file. When building your app bundle, Gradle then injects
+    <manifest split="dynamic_feature1"> in the module’s manifest.
+-->
+
     <dist:module dist:title="@string/module_assets">
         <dist:delivery>
             <dist:on-demand/>

@@ -15,7 +15,7 @@
   -->
 
 <resources>
-    <string name="app_name">ACod Dynamic Feature Delivery</string>
+    <string name="app_name">AndCod Dynamic Feature Delivery</string>
     <string name="load_feature_kotlin">Start Kotlin Feature</string>
     <string name="load_feature_java">Start Java Feature</string>
     <string name="load_native_code">Start Native Feature</string>
