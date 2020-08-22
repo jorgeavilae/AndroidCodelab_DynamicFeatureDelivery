@@ -26,9 +26,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.Group
-import com.google.android.play.core.splitinstall.SplitInstallManager
-import com.google.android.play.core.splitinstall.SplitInstallManagerFactory
-import com.google.android.play.core.splitinstall.SplitInstallRequest
+import com.google.android.play.core.splitinstall.*
+import com.google.android.play.core.splitinstall.model.SplitInstallSessionStatus
 
 private const val packageName = "com.google.android.samples.dynamicfeatures.ondemand"
 private const val kotlinSampleClassname = "$packageName.KotlinSampleActivity"
@@ -43,7 +42,41 @@ class MainActivity : AppCompatActivity() {
     private lateinit var progressText: TextView
 
     private lateinit var manager : SplitInstallManager
-    private val moduleAssets by lazy { getString(R.string.module_assets)}
+
+    private val moduleKotlin by lazy { getString(R.string.module_feature_kotlin) }
+    private val moduleJava by lazy { getString(R.string.module_feature_java) }
+    private val moduleNative by lazy { getString(R.string.module_native) }
+    private val moduleAssets by lazy { getString(R.string.module_assets) }
+
+    private val installListener = SplitInstallStateUpdatedListener{ state ->
+        val multiInstall = state.moduleNames().size > 1
+        val names = state.moduleNames().joinToString(" - ")
+        when(state.status()) {
+            SplitInstallSessionStatus.DOWNLOADING -> {
+                //  In order to see this, the application has to be uploaded to the Play Store.
+                displayLoadingState(state, "Downloading $names")
+            }
+            SplitInstallSessionStatus.REQUIRES_USER_CONFIRMATION -> {
+                /*
+                  This may occur when attempting to download a sufficiently large module.
+
+                  In order to see this, the application has to be uploaded to the Play Store.
+                  Then features can be requested until the confirmation path is triggered.
+                 */
+                // Deprecated, use this manager.startConfirmationDialogForResult(state, this, requestCode)
+                startIntentSender(state.resolutionIntent()?.intentSender, null, 0, 0, 0)
+            }
+            SplitInstallSessionStatus.INSTALLED -> {
+                onSuccessfulLoad(names, launch = !multiInstall)
+            }
+            SplitInstallSessionStatus.INSTALLING -> {
+                displayLoadingState(state, "Installing $names")
+            }
+            SplitInstallSessionStatus.FAILED -> {
+                toastAndLog("Error: ${state.errorCode()} for module ${state.moduleNames()}")
+            }
+        }
+    }
 
     private val clickListener by lazy {
         View.OnClickListener {
@@ -51,7 +84,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.btn_load_kotlin -> launchActivity(kotlinSampleClassname)
                 R.id.btn_load_java -> launchActivity(javaSampleClassname)
                 R.id.btn_load_native -> launchActivity(nativeSampleClassname)
-                R.id.btn_load_assets -> displayAssets()
+                R.id.btn_load_assets -> loadAndLaunchModule(moduleAssets)
             }
         }
     }
@@ -65,11 +98,28 @@ class MainActivity : AppCompatActivity() {
         initializeViews()
     }
 
+    /*
+        Note:
+
+        In this simple sample we are linking the registration of the listener to the Activity
+        lifecycle. In a more complex application you probably want to attach the listener to a
+        component with a longer life cycle, like a ViewModel, so that it's not impacted by
+        configuration changes or similar events.
+     */
+    override fun onResume() {
+        // Listener can be registered even without directly triggering a download.
+        manager.registerListener(installListener)
+        super.onResume()
+    }
+
+    override fun onPause() {
+        // Make sure to dispose of the listener once it's no longer needed.
+        manager.unregisterListener(installListener)
+        super.onPause()
+    }
+
     /** Display assets loaded from the assets feature module. */
     private fun displayAssets() {
-        updateProgressMessage("Loading module $moduleAssets")
-        if (manager.installedModules.contains(moduleAssets)) {
-            updateProgressMessage("Already installed")
             // Get the asset manager with a refreshed context, to access content of newly installed apk.
             val assetManager = createPackageContext(packageName, 0).assets
             // Now treat it like any other asset file.
@@ -83,27 +133,6 @@ class MainActivity : AppCompatActivity() {
                     .setTitle("Asset content")
                     .setMessage(assetContent)
                     .show()
-
-            displayButtons()
-        } else {
-            updateProgressMessage("Starting install for $moduleAssets")
-
-            val request = SplitInstallRequest.newBuilder()
-                    .addModule(moduleAssets)
-                    .build()
-
-            manager.startInstall(request)
-                    .addOnCompleteListener {
-                        displayAssets()
-                    }
-                    .addOnSuccessListener {
-                        toastAndLog("Loading $moduleAssets")
-                    }
-                    .addOnFailureListener {
-                        toastAndLog("Error Loading $moduleAssets")
-                        displayButtons()
-                    }
-        }
     }
 
     /** Launch an activity by its class name. */
@@ -112,6 +141,56 @@ class MainActivity : AppCompatActivity() {
                 .also {
                     startActivity(it)
                 }
+    }
+
+    /**
+     * Load a feature by module name.
+     * @param name The name of the feature module to load.
+     */
+    private fun loadAndLaunchModule(name: String) {
+        updateProgressMessage("Loading module $name")
+        // Skip loading if the module already is installed. Perform success action directly.
+        if (manager.installedModules.contains(name)) {
+            updateProgressMessage("Already installed")
+            onSuccessfulLoad(name, launch = true)
+            return
+        }
+
+        // Create request to install a feature module by name.
+        val request = SplitInstallRequest.newBuilder()
+                .addModule(name)
+                .build()
+
+        // Load and install the requested feature module.
+        manager.startInstall(request)
+
+        updateProgressMessage("Starting install for $name")
+    }
+
+    private fun displayLoadingState(state: SplitInstallSessionState, message: String) {
+        displayProgress()
+
+        progressBar.max = state.totalBytesToDownload().toInt()
+        progressBar.progress = state.bytesDownloaded().toInt()
+
+        updateProgressMessage(message)
+    }
+
+    /**
+     * Define what to do once a feature module is loaded successfully.
+     * @param moduleName The name of the successfully loaded module.
+     * @param launch `true` if the feature module should be launched, else `false`.
+     */
+    private fun onSuccessfulLoad(moduleName: String, launch: Boolean) {
+        if (launch)
+            when(moduleName) {
+                moduleKotlin -> launchActivity(kotlinSampleClassname)
+                moduleJava -> launchActivity(javaSampleClassname)
+                moduleNative -> launchActivity(nativeSampleClassname)
+                moduleAssets -> displayAssets()
+            }
+
+        displayButtons()
     }
 
     /** Set up all view variables. */
