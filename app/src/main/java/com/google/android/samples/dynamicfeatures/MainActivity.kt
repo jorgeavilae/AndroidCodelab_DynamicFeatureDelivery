@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
     private val installListener = SplitInstallStateUpdatedListener{ state ->
         val multiInstall = state.moduleNames().size > 1
         val names = state.moduleNames().joinToString(" - ")
-        when(state.status()) {
+        when (state.status()) {
             SplitInstallSessionStatus.DOWNLOADING -> {
                 //  In order to see this, the application has to be uploaded to the Play Store.
                 displayLoadingState(state, "Downloading $names")
@@ -63,7 +63,7 @@ class MainActivity : AppCompatActivity() {
                   In order to see this, the application has to be uploaded to the Play Store.
                   Then features can be requested until the confirmation path is triggered.
                  */
-                // Deprecated, use this manager.startConfirmationDialogForResult(state, this, requestCode)
+                // Deprecated in playCore 1.8, use this manager.startConfirmationDialogForResult(state, this, requestCode)
                 startIntentSender(state.resolutionIntent()?.intentSender, null, 0, 0, 0)
             }
             SplitInstallSessionStatus.INSTALLED -> {
@@ -81,9 +81,9 @@ class MainActivity : AppCompatActivity() {
     private val clickListener by lazy {
         View.OnClickListener {
             when (it.id) {
-                R.id.btn_load_kotlin -> launchActivity(kotlinSampleClassname)
-                R.id.btn_load_java -> launchActivity(javaSampleClassname)
-                R.id.btn_load_native -> launchActivity(nativeSampleClassname)
+                R.id.btn_load_kotlin -> loadAndLaunchModule(moduleKotlin)
+                R.id.btn_load_java -> loadAndLaunchModule(moduleJava)
+                R.id.btn_load_native -> loadAndLaunchModule(moduleNative)
                 R.id.btn_load_assets -> loadAndLaunchModule(moduleAssets)
             }
         }
