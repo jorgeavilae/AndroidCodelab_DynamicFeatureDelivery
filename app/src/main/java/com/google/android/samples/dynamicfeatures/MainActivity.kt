@@ -85,6 +85,9 @@ class MainActivity : AppCompatActivity() {
                 R.id.btn_load_java -> loadAndLaunchModule(moduleJava)
                 R.id.btn_load_native -> loadAndLaunchModule(moduleNative)
                 R.id.btn_load_assets -> loadAndLaunchModule(moduleAssets)
+                R.id.btn_install_all_now -> installAllFeaturesNow()
+                R.id.btn_install_all_deferred -> installAllFeaturesDeferred()
+                R.id.btn_request_uninstall -> requestUninstall()
             }
         }
     }
@@ -193,6 +196,51 @@ class MainActivity : AppCompatActivity() {
         displayButtons()
     }
 
+    /** Install all features but do not launch any of them. */
+    private fun installAllFeaturesNow() {
+        // Request all known modules to be downloaded in a single session.
+        val moduleNames = listOf(moduleKotlin, moduleJava, moduleNative, moduleAssets)
+        val requestBuilder = SplitInstallRequest.newBuilder()
+
+        moduleNames.forEach { name ->
+            if (!manager.installedModules.contains(name)) {
+                requestBuilder.addModule(name)
+            }
+        }
+
+        val request = requestBuilder.build()
+
+        manager.startInstall(request).addOnSuccessListener {
+            toastAndLog("Loading ${request.moduleNames}")
+        }.addOnFailureListener {
+            toastAndLog("Failed loading ${request.moduleNames}")
+        }
+    }
+
+    /** Install all features deferred. */
+    private fun installAllFeaturesDeferred() {
+
+        val modules = listOf(moduleKotlin, moduleJava, moduleAssets, moduleNative)
+
+        manager.deferredInstall(modules).addOnSuccessListener {
+            toastAndLog("Deferred installation of $modules")
+        }.addOnFailureListener {
+            toastAndLog("Failed installation of $modules")
+        }
+    }
+
+    /** Request uninstall of all features. */
+    private fun requestUninstall() {
+
+        toastAndLog("Requesting uninstall of all modules." +
+                "This will happen at some point in the future.")
+
+        val installedModules = manager.installedModules.toList()
+        manager.deferredUninstall(installedModules).addOnSuccessListener {
+            toastAndLog("Uninstalling $installedModules")
+        }
+    }
+
     /** Set up all view variables. */
     private fun initializeViews() {
         buttons = findViewById(R.id.buttons)
@@ -205,11 +253,13 @@ class MainActivity : AppCompatActivity() {
 
     /** Set all click listeners required for the buttons on the UI. */
     private fun setupClickListener() {
-
         setClickListener(R.id.btn_load_kotlin, clickListener)
         setClickListener(R.id.btn_load_java, clickListener)
         setClickListener(R.id.btn_load_assets, clickListener)
         setClickListener(R.id.btn_load_native, clickListener)
+        setClickListener(R.id.btn_install_all_now, clickListener)
+        setClickListener(R.id.btn_install_all_deferred, clickListener)
+        setClickListener(R.id.btn_request_uninstall, clickListener)
     }
 
     private fun setClickListener(id: Int, listener: View.OnClickListener) {
